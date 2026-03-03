@@ -1,135 +1,152 @@
-# Turborepo starter
+# QueuePro — Multi-Tenant SaaS Queue Management Platform
 
-This Turborepo starter is maintained by the Turborepo core team.
+A production-ready, multi-tenant queue management system built as a **Turborepo** monorepo with **NestJS** microservices, **Next.js** frontend, **MongoDB**, **Redis**, and real-time **WebSocket** updates.
 
-## Using this example
-
-Run the following command:
-
-```sh
-npx create-turbo@latest
-```
-
-## What's inside?
-
-This Turborepo includes the following packages/apps:
-
-### Apps and Packages
-
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
-
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
-
-### Utilities
-
-This Turborepo has some additional tools already setup for you:
-
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
-
-### Build
-
-To build all apps and packages, run the following command:
+## Architecture
 
 ```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build
-
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build
-yarn dlx turbo build
-pnpm exec turbo build
+Customer → [Next.js CRM :3000] → [API Gateway :5000] → TCP → Microservices
+                                                              ├── accounts-service :5001
+                                                              ├── queue-service    :5002
+                                                              ├── notification-svc :5003
+                                                              ├── analytics-svc   :5004
+                                                              ├── telegram-svc    :5005
+                                                              └── websocket-svc   :5006
 ```
 
-You can build a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+## Tech Stack
+
+| Layer         | Technology                                                          |
+| ------------- | ------------------------------------------------------------------- |
+| Monorepo      | Turborepo + npm workspaces                                          |
+| Frontend      | Next.js 16, React 19, Tailwind CSS 4, next-intl, Zustand, Socket.IO |
+| Gateway       | NestJS 11 (HTTP), JWT auth, Passport                                |
+| Microservices | NestJS 11 (TCP transport), Mongoose 8                               |
+| Database      | MongoDB 7                                                           |
+| Cache / Queue | Redis 7 (ioredis, Redlock)                                          |
+| Real-time     | Socket.IO 4 via @nestjs/websockets                                  |
+| Telegram      | Telegraf 4 (per-tenant bot management)                              |
+| SMS           | Eskiz.uz API                                                        |
+| Containers    | Docker, Docker Compose, Traefik                                     |
+
+## Project Structure
 
 ```
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build --filter=docs
-
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build --filter=docs
-yarn exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
+queue-system/
+├── apps/
+│   ├── queue-crm/            # Next.js frontend (i18n: en, ru, uz)
+│   └── queue-gateway/        # NestJS HTTP API Gateway
+├── microservices/
+│   ├── accounts-service/     # Auth, tenants, branches, users, counters
+│   ├── queue-service/        # Queue engine, tickets, state machine
+│   ├── notification-service/ # SMS + Telegram notifications
+│   ├── analytics-service/    # Event tracking, daily stats
+│   ├── telegram-service/     # Multi-tenant Telegram bot management
+│   └── websocket-service/    # Socket.IO real-time gateway
+├── packages/
+│   ├── shared/               # Enums, DTOs, interfaces, constants
+│   ├── eslint-config/        # Shared ESLint
+│   ├── typescript-config/    # Shared TSConfig
+│   └── ui/                   # Shared UI components
+├── docker/                   # Production Dockerfiles
+├── docker-compose.dev.yml    # Dev: MongoDB + Redis
+├── docker-compose.yml        # Prod: All services
+└── turbo.json
 ```
 
-### Develop
+## Quick Start
 
-To develop all apps and packages, run the following command:
+### Prerequisites
 
-```
-cd my-turborepo
+- Node.js ≥ 18, npm ≥ 9
+- Docker & Docker Compose
 
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev
+### 1. Install
 
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev
-yarn exec turbo dev
-pnpm exec turbo dev
+```bash
+npm install
 ```
 
-You can develop a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+### 2. Start MongoDB + Redis (dev)
 
-```
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev --filter=web
-
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev --filter=web
-yarn exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
+```bash
+npm run dev:docker
 ```
 
-### Remote Caching
+- MongoDB → `localhost:27017` (admin/admin123)
+- Redis → `localhost:6379`
+- Mongo Express → `http://localhost:8081`
+- Redis Commander → `http://localhost:8082`
 
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
+### 3. Start all services
 
-Turborepo can use a technique known as [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo login
-
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo login
-yarn exec turbo login
-pnpm exec turbo login
+```bash
+npm run dev:full
 ```
 
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
+| Service      | URL                       |
+| ------------ | ------------------------- |
+| CRM Frontend | http://localhost:3000     |
+| API Gateway  | http://localhost:5000/api |
+| WebSocket    | ws://localhost:5006       |
 
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
+## i18n — Language-Based Routing
 
 ```
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo link
-
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo link
-yarn exec turbo link
-pnpm exec turbo link
+/en/...  → English
+/ru/...  → Русский
+/uz/...  → O'zbekcha
 ```
 
-## Useful Links
+## API
 
-Learn more about the power of Turborepo:
+### Public
 
-- [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.dev/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.dev/docs/reference/configuration)
-- [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)
+```
+POST /api/auth/login|register|refresh
+GET  /api/queues[/:id][/live]
+POST /api/tickets
+GET  /api/tickets/status/:publicId
+GET  /api/tickets/wait/:publicId
+```
+
+### Protected (JWT)
+
+```
+CRUD /api/tenants|branches|queues|counters
+POST /api/counters/:id/next|recall|skip|start|done|transfer
+GET  /api/analytics/daily|queues|counters|branch|peak-hours
+POST|DELETE /api/telegram/bot
+```
+
+## Ticket Lifecycle
+
+```
+CREATED → WAITING → CALLED → SERVING → DONE
+                  ↘ SKIPPED ↗
+```
+
+## WebSocket Events
+
+| Direction     | Events                                                                |
+| ------------- | --------------------------------------------------------------------- |
+| Client→Server | joinBranch, joinQueue, trackTicket, joinCounter, joinDisplay          |
+| Server→Client | queueUpdate, ticketCalled, ticketUpdate, displayUpdate, counterUpdate |
+
+## Production
+
+```bash
+cp .env.production .env.production.local  # Set real values
+npm run prod:up                           # Build & start all containers
+npm run prod:logs                         # View logs
+npm run prod:down                         # Stop
+```
+
+## Roles
+
+| Role           | Access                         |
+| -------------- | ------------------------------ |
+| SUPER_ADMIN    | Full system                    |
+| TENANT_ADMIN   | Own tenant, branches, settings |
+| BRANCH_MANAGER | Assigned branch                |
+| STAFF          | Counter operations             |
