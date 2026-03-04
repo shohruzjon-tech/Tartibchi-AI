@@ -8,13 +8,13 @@ import { ThemeToggle } from "./theme-toggle";
 import { Link, usePathname } from "../i18n/navigation";
 import { useAuthStore } from "../lib/store";
 import { Dropdown } from "./ui/dropdown";
+import { WorkspaceRoleSwitcher } from "./workspace-role-switcher";
 import {
   User,
   LogOut,
   LayoutDashboard,
   Settings,
   ChevronDown,
-  Search,
   Menu,
   X,
   ArrowRight,
@@ -67,10 +67,7 @@ export function Header() {
   if (isDashboard) {
     return (
       <div className="flex flex-1 items-center justify-between">
-        <div className="hidden items-center gap-3 text-content-tertiary sm:flex">
-          <Search size={18} />
-          <span className="text-sm">Search...</span>
-        </div>
+        <WorkspaceRoleSwitcher />
         <div className="ml-auto flex items-center gap-3">
           <LanguageSwitcher />
           <ThemeToggle />

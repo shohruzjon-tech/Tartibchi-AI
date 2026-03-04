@@ -46,6 +46,11 @@ const MULTI_GROUPS: SidebarGroup[] = [
         icon: BarChart3,
         exact: true,
       },
+      {
+        href: "/dashboard/analytics",
+        labelKey: "analytics",
+        icon: TrendingUp,
+      },
     ],
   },
   {
@@ -62,23 +67,10 @@ const MULTI_GROUPS: SidebarGroup[] = [
       { href: "/dashboard/counters", labelKey: "counters", icon: Monitor },
       { href: "/dashboard/branches", labelKey: "branches", icon: Building2 },
       { href: "/dashboard/employees", labelKey: "staff", icon: Users },
-    ],
-  },
-  {
-    id: "insights",
-    titleKey: "insights",
-    collapsible: true,
-    defaultCollapsed: false,
-    routes: [
       {
         href: "/dashboard/customers",
         labelKey: "customers",
         icon: UserCircle,
-      },
-      {
-        href: "/dashboard/analytics",
-        labelKey: "analytics",
-        icon: TrendingUp,
       },
     ],
   },
@@ -105,6 +97,11 @@ const SOLO_GROUPS: SidebarGroup[] = [
         icon: BarChart3,
         exact: true,
       },
+      {
+        href: "/dashboard/analytics",
+        labelKey: "analytics",
+        icon: TrendingUp,
+      },
     ],
   },
   {
@@ -123,23 +120,10 @@ const SOLO_GROUPS: SidebarGroup[] = [
         labelKey: "services",
         icon: ClipboardList,
       },
-    ],
-  },
-  {
-    id: "insights",
-    titleKey: "insights",
-    collapsible: true,
-    defaultCollapsed: false,
-    routes: [
       {
         href: "/dashboard/customers",
         labelKey: "customers",
         icon: UserCircle,
-      },
-      {
-        href: "/dashboard/analytics",
-        labelKey: "analytics",
-        icon: TrendingUp,
       },
     ],
   },

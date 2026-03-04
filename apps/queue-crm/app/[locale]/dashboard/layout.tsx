@@ -41,7 +41,7 @@ export default function DashboardLayout({
   return (
     <div className="flex h-screen bg-surface-primary">
       {/* Desktop Sidebar */}
-      <div className="hidden lg:block">
+      <div className="relative z-30 hidden lg:block">
         <Sidebar />
       </div>
 

@@ -17,6 +17,7 @@ import {
   CheckCircle2,
   Loader2,
   Rocket,
+  RefreshCcw,
 } from "lucide-react";
 import { Link, useRouter } from "../../../../i18n/navigation";
 import { api } from "../../../../lib/api";
@@ -343,86 +344,131 @@ export default function RegisterPage() {
               initial={{ opacity: 0, x: 24 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -24 }}
-              transition={{ duration: 0.2 }}
-              className="rounded-2xl border border-surface-tertiary/50 bg-surface-elevated p-5 shadow-soft"
+              transition={{ duration: 0.25 }}
+              className="space-y-5"
             >
-              <div className="space-y-4">
-                <AnimatePresence>
-                  {error && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: "auto" }}
-                      exit={{ opacity: 0, height: 0 }}
-                      className="rounded-lg bg-status-error/8 px-3 py-2 text-[13px] font-medium text-status-error"
-                    >
-                      {error}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+              <div className="relative rounded-2xl border border-accent-primary/10 bg-surface-elevated p-6 shadow-soft overflow-hidden">
+                <div className="pointer-events-none absolute -top-20 left-1/2 -translate-x-1/2 h-40 w-40 rounded-full bg-accent-primary/[0.07] blur-[60px]" />
 
-                <div className="text-center">
-                  <p className="text-[13px] text-content-secondary">
-                    {t("otpSentTo")}
-                  </p>
-                  <p className="mt-0.5 text-[15px] font-semibold font-mono text-content-primary tracking-wider">
-                    {form.phone}
-                  </p>
-                </div>
-
-                <OtpInput
-                  value={otpCode}
-                  onChange={setOtpCode}
-                  autoFocus
-                  disabled={loading}
-                />
-
-                <div className="text-center">
-                  {countdown > 0 ? (
-                    <p className="text-[13px] text-content-tertiary">
-                      {t("resendIn")}{" "}
-                      <span className="font-semibold text-accent-primary">
-                        {Math.floor(countdown / 60)}:
-                        {String(countdown % 60).padStart(2, "0")}
-                      </span>
-                    </p>
-                  ) : (
-                    <button
-                      onClick={handleResendOtp}
-                      className="text-[13px] font-semibold text-accent-primary hover:text-accent-secondary transition-colors"
-                    >
-                      {t("resendCode")}
-                    </button>
-                  )}
-                </div>
-
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => {
-                      setStep(0);
-                      setOtpCode("");
-                      setError("");
-                    }}
-                    className="btn-ghost flex-1 py-2 text-[13px]"
-                  >
-                    <ArrowLeft size={13} />
-                    {tc("back")}
-                  </button>
-                  <motion.button
-                    whileTap={{ scale: 0.97 }}
-                    onClick={handleVerifyAndRegister}
-                    disabled={loading || otpCode.length < 6}
-                    className="btn-primary flex-[2] py-2 text-[13px] font-semibold"
-                  >
-                    {loading ? (
-                      <Loader2 size={15} className="animate-spin" />
-                    ) : (
-                      <>
-                        {t("verifyAndCreate")}
-                        <ArrowRight size={13} />
-                      </>
+                <div className="relative space-y-5">
+                  <AnimatePresence>
+                    {error && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="rounded-xl bg-status-error/8 border border-status-error/15 px-3.5 py-2.5 text-[13px] font-medium text-status-error"
+                      >
+                        {error}
+                      </motion.div>
                     )}
-                  </motion.button>
+                  </AnimatePresence>
+
+                  <div className="text-center space-y-1">
+                    <p className="text-[12px] uppercase tracking-widest font-semibold text-content-tertiary">
+                      {t("otpSentTo")}
+                    </p>
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.1 }}
+                      className="inline-flex items-center gap-2 rounded-xl bg-surface-secondary/60 px-4 py-2"
+                    >
+                      <Phone size={14} className="text-accent-primary/60" />
+                      <span className="text-[16px] font-bold font-mono text-content-primary tracking-[0.15em]">
+                        {form.phone}
+                      </span>
+                    </motion.div>
+                  </div>
+
+                  <OtpInput
+                    value={otpCode}
+                    onChange={setOtpCode}
+                    autoFocus
+                    disabled={loading}
+                  />
+
+                  <div className="text-center">
+                    {countdown > 0 ? (
+                      <div className="inline-flex items-center gap-2 rounded-full bg-surface-secondary/60 px-4 py-1.5">
+                        <div className="relative h-4 w-4">
+                          <svg
+                            className="h-4 w-4 -rotate-90"
+                            viewBox="0 0 16 16"
+                          >
+                            <circle
+                              cx="8"
+                              cy="8"
+                              r="6"
+                              fill="none"
+                              stroke="var(--color-surface-tertiary)"
+                              strokeWidth="2"
+                            />
+                            <motion.circle
+                              cx="8"
+                              cy="8"
+                              r="6"
+                              fill="none"
+                              stroke="var(--color-accent-primary)"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeDasharray={Math.PI * 12}
+                              initial={{ strokeDashoffset: 0 }}
+                              animate={{
+                                strokeDashoffset:
+                                  Math.PI * 12 * (1 - countdown / 120),
+                              }}
+                              transition={{ duration: 1, ease: "linear" }}
+                            />
+                          </svg>
+                        </div>
+                        <span className="text-[12px] font-semibold text-content-secondary tabular-nums">
+                          {Math.floor(countdown / 60)}:
+                          {String(countdown % 60).padStart(2, "0")}
+                        </span>
+                      </div>
+                    ) : (
+                      <motion.button
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        onClick={handleResendOtp}
+                        className="inline-flex items-center gap-1.5 rounded-full bg-accent-primary/8 px-4 py-1.5 text-[12px] font-semibold text-accent-primary hover:bg-accent-primary/15 transition-colors"
+                      >
+                        <RefreshCcw size={12} />
+                        {t("resendCode")}
+                      </motion.button>
+                    )}
+                  </div>
                 </div>
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    setStep(0);
+                    setOtpCode("");
+                    setError("");
+                  }}
+                  className="btn-ghost flex-1 py-2.5 text-[13px]"
+                >
+                  <ArrowLeft size={13} />
+                  {tc("back")}
+                </button>
+                <motion.button
+                  whileTap={{ scale: 0.97 }}
+                  onClick={handleVerifyAndRegister}
+                  disabled={loading || otpCode.length < 6}
+                  className="btn-primary flex-[2] py-2.5 text-[13px] font-semibold"
+                >
+                  {loading ? (
+                    <Loader2 size={15} className="animate-spin" />
+                  ) : (
+                    <>
+                      {t("verifyAndCreate")}
+                      <ArrowRight size={13} />
+                    </>
+                  )}
+                </motion.button>
               </div>
             </motion.div>
           )}
