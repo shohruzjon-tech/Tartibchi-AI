@@ -1,0 +1,44 @@
+# Multi-stage Dockerfile for NestJS microservices
+FROM node:20-alpine AS base
+WORKDIR /app
+
+# Install dependencies stage
+FROM base AS deps
+COPY package.json package-lock.json* ./
+COPY packages/shared/package.json ./packages/shared/
+
+ARG SERVICE_PATH
+COPY ${SERVICE_PATH}/package.json ./${SERVICE_PATH}/
+
+# Install all workspace dependencies
+RUN npm install --workspace=packages/shared --workspace=${SERVICE_PATH} --include=dev
+
+# Build shared package
+FROM deps AS build-shared
+COPY packages/shared/ ./packages/shared/
+RUN npm run --workspace=packages/shared build 2>/dev/null || true
+
+# Build microservice
+FROM build-shared AS build
+ARG SERVICE_PATH
+COPY ${SERVICE_PATH}/ ./${SERVICE_PATH}/
+COPY tsconfig*.json ./
+RUN cd ${SERVICE_PATH} && npx nest build
+
+# Production stage
+FROM node:20-alpine AS production
+WORKDIR /app
+ENV NODE_ENV=production
+
+ARG SERVICE_PATH
+
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_modules
+COPY --from=build-shared /app/packages/shared/ ./packages/shared/
+COPY --from=build /app/${SERVICE_PATH}/dist ./${SERVICE_PATH}/dist
+COPY --from=build /app/${SERVICE_PATH}/package.json ./${SERVICE_PATH}/package.json
+
+# Set the working directory to service
+WORKDIR /app/${SERVICE_PATH}
+
+CMD ["node", "dist/main"]

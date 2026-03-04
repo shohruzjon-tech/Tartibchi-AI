@@ -1,0 +1,261 @@
+# Production Docker Compose - All services
+version: "3.9"
+
+services:
+  # ======== Infrastructure ========
+  mongodb:
+    image: mongo:7
+    container_name: qs-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-admin123}
+      MONGO_INITDB_DATABASE: queue_system
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - queue-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: qs-redis
+    restart: unless-stopped
+    command: redis-server --maxmemory 512mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    networks:
+      - queue-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ======== Microservices ========
+  accounts-service:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.microservice
+      args:
+        SERVICE_PATH: microservices/accounts-service
+    container_name: qs-accounts
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      MONGODB_URI: mongodb://${MONGO_USER:-admin}:${MONGO_PASSWORD:-admin123}@mongodb:27017/queue_system?authSource=admin
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      ACCOUNTS_SERVICE_HOST: 0.0.0.0
+      ACCOUNTS_SERVICE_PORT: 5001
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-15m}
+      JWT_REFRESH_EXPIRATION: ${JWT_REFRESH_EXPIRATION:-7d}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - queue-network
+
+  queue-service:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.microservice
+      args:
+        SERVICE_PATH: microservices/queue-service
+    container_name: qs-queue
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      MONGODB_URI: mongodb://${MONGO_USER:-admin}:${MONGO_PASSWORD:-admin123}@mongodb:27017/queue_system?authSource=admin
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      QUEUE_SERVICE_HOST: 0.0.0.0
+      QUEUE_SERVICE_PORT: 5002
+      NOTIFICATION_SERVICE_HOST: notification-service
+      NOTIFICATION_SERVICE_PORT: 5003
+      ANALYTICS_SERVICE_HOST: analytics-service
+      ANALYTICS_SERVICE_PORT: 5004
+      WEBSOCKET_SERVICE_HOST: websocket-service
+      WEBSOCKET_SERVICE_PORT: 5106
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - queue-network
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.microservice
+      args:
+        SERVICE_PATH: microservices/notification-service
+    container_name: qs-notification
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      MONGODB_URI: mongodb://${MONGO_USER:-admin}:${MONGO_PASSWORD:-admin123}@mongodb:27017/queue_system?authSource=admin
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      NOTIFICATION_SERVICE_HOST: 0.0.0.0
+      NOTIFICATION_SERVICE_PORT: 5003
+      ESKIZ_EMAIL: ${ESKIZ_EMAIL}
+      ESKIZ_PASSWORD: ${ESKIZ_PASSWORD}
+      TELEGRAM_SERVICE_HOST: telegram-service
+      TELEGRAM_SERVICE_PORT: 5005
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - queue-network
+
+  analytics-service:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.microservice
+      args:
+        SERVICE_PATH: microservices/analytics-service
+    container_name: qs-analytics
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      MONGODB_URI: mongodb://${MONGO_USER:-admin}:${MONGO_PASSWORD:-admin123}@mongodb:27017/queue_system?authSource=admin
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      ANALYTICS_SERVICE_HOST: 0.0.0.0
+      ANALYTICS_SERVICE_PORT: 5004
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - queue-network
+
+  telegram-service:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.microservice
+      args:
+        SERVICE_PATH: microservices/telegram-service
+    container_name: qs-telegram
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      MONGODB_URI: mongodb://${MONGO_USER:-admin}:${MONGO_PASSWORD:-admin123}@mongodb:27017/queue_system?authSource=admin
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      TELEGRAM_SERVICE_HOST: 0.0.0.0
+      TELEGRAM_SERVICE_PORT: 5005
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - queue-network
+
+  websocket-service:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.microservice
+      args:
+        SERVICE_PATH: microservices/websocket-service
+    container_name: qs-websocket
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      WEBSOCKET_SERVICE_HOST: 0.0.0.0
+      WEBSOCKET_SERVICE_PORT: 5006
+      WEBSOCKET_TCP_PORT: 5106
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - queue-network
+
+  # ======== Apps ========
+  gateway:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.gateway
+    container_name: qs-gateway
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      GATEWAY_PORT: 5000
+      ACCOUNTS_SERVICE_HOST: accounts-service
+      ACCOUNTS_SERVICE_PORT: 5001
+      QUEUE_SERVICE_HOST: queue-service
+      QUEUE_SERVICE_PORT: 5002
+      NOTIFICATION_SERVICE_HOST: notification-service
+      NOTIFICATION_SERVICE_PORT: 5003
+      ANALYTICS_SERVICE_HOST: analytics-service
+      ANALYTICS_SERVICE_PORT: 5004
+      TELEGRAM_SERVICE_HOST: telegram-service
+      TELEGRAM_SERVICE_PORT: 5005
+      WEBSOCKET_SERVICE_HOST: websocket-service
+      WEBSOCKET_SERVICE_PORT: 5106
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+    depends_on:
+      - accounts-service
+      - queue-service
+      - notification-service
+      - analytics-service
+      - telegram-service
+      - websocket-service
+    networks:
+      - queue-network
+
+  crm:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.crm
+    container_name: qs-crm
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:5000/api}
+      NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL:-http://localhost:5006}
+    depends_on:
+      - gateway
+    networks:
+      - queue-network
+
+  # ======== Reverse Proxy ========
+  traefik:
+    image: traefik:v3.0
+    container_name: qs-traefik
+    restart: unless-stopped
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - queue-network
+    labels:
+      - "traefik.enable=true"
+
+volumes:
+  mongodb_data:
+  redis_data:
+
+networks:
+  queue-network:
+    driver: bridge

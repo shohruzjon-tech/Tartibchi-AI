@@ -1,0 +1,40 @@
+{
+  "name": "@repo/shared",
+  "version": "0.0.1",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./dist/index.js"
+    },
+    "./enums": {
+      "types": "./src/enums/index.ts",
+      "default": "./dist/enums/index.js"
+    },
+    "./interfaces": {
+      "types": "./src/interfaces/index.ts",
+      "default": "./dist/interfaces/index.js"
+    },
+    "./dto": {
+      "types": "./src/dto/index.ts",
+      "default": "./dist/dto/index.js"
+    },
+    "./constants": {
+      "types": "./src/constants/index.ts",
+      "default": "./dist/constants/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "class-validator": "^0.14.1",
+    "class-transformer": "^0.5.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3"
+  }
+}

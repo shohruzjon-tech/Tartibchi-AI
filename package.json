@@ -4,6 +4,12 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
+    "dev:docker": "docker compose -f docker-compose.dev.yml up -d",
+    "dev:docker:down": "docker compose -f docker-compose.dev.yml down",
+    "dev:full": "npm run dev:docker && turbo run dev",
+    "prod:up": "docker compose -f docker-compose.yml --env-file .env.production up -d --build",
+    "prod:down": "docker compose -f docker-compose.yml down",
+    "prod:logs": "docker compose -f docker-compose.yml logs -f",
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "check-types": "turbo run check-types"
@@ -19,6 +25,7 @@
   "packageManager": "npm@11.6.2",
   "workspaces": [
     "apps/*",
-    "packages/*"
+    "packages/*",
+    "microservices/*"
   ]
 }

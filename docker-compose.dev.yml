@@ -1,0 +1,67 @@
+# Development: Only MongoDB and Redis run in Docker
+# All NestJS services run locally via turbo dev
+
+services:
+  mongodb:
+    image: mongo:8
+    container_name: queue-system-mongodb
+    restart: unless-stopped
+    ports:
+      - "27018:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin123
+      MONGO_INITDB_DATABASE: queue_system
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - queue-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: queue-system-redis
+    restart: unless-stopped
+    ports:
+      - "6380:6379"
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    networks:
+      - queue-network
+
+  mongo-express:
+    image: mongo-express
+    container_name: queue-system-mongo-express
+    restart: unless-stopped
+    ports:
+      - "8083:8081"
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: admin
+      ME_CONFIG_MONGODB_ADMINPASSWORD: admin123
+      ME_CONFIG_MONGODB_URL: mongodb://admin:admin123@mongodb:27017/
+      ME_CONFIG_BASICAUTH: "false"
+    depends_on:
+      - mongodb
+    networks:
+      - queue-network
+
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: queue-system-redis-commander
+    restart: unless-stopped
+    ports:
+      - "8084:8081"
+    environment:
+      REDIS_HOSTS: local:redis:6379
+    depends_on:
+      - redis
+    networks:
+      - queue-network
+
+volumes:
+  mongodb_data:
+  redis_data:
+
+networks:
+  queue-network:
+    driver: bridge
