@@ -40,12 +40,19 @@ export class TenantController {
 
   @MessagePattern(TENANT_PATTERNS.SWITCH_MODE)
   async switchMode(
-    @Payload() data: { tenantId: string; mode: TenantMode; soloProfile?: any },
+    @Payload()
+    data: {
+      tenantId: string;
+      mode: TenantMode;
+      soloProfile?: any;
+      workingHours?: any;
+    },
   ) {
     return this.tenantService.switchMode(
       data.tenantId,
       data.mode,
       data.soloProfile,
+      data.workingHours,
     );
   }
 }

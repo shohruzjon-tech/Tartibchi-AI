@@ -31,7 +31,7 @@ import {
   X,
 } from "lucide-react";
 import { api } from "../../../../../lib/api";
-import { useStaffStore } from "../../../../../lib/store";
+import { useAuthStore, useStaffStore } from "../../../../../lib/store";
 import { useSocket } from "../../../../../lib/hooks/use-socket";
 import { useRouter } from "../../../../../i18n/navigation";
 
@@ -90,18 +90,29 @@ export default function StaffCounterPage({
   const t = useTranslations("staffCounter");
   const router = useRouter();
 
-  // Staff-only session — completely separate from admin auth
+  // Main auth (TENANT_ADMIN / BRANCH_MANAGER / STAFF via OTP)
+  const mainToken = useAuthStore((s) => s.token);
+  const mainUser = useAuthStore((s) => s.user);
+
+  // Legacy staff auth (phone + passcode)
   const staffToken = useStaffStore((s) => s.token);
   const staffUser = useStaffStore((s) => s.staff);
   const clearStaffAuth = useStaffStore((s) => s.clearStaffAuth);
   const isStaffAuthenticated = useStaffStore((s) => s.isStaffAuthenticated);
 
-  // Redirect to staff login if not authenticated
+  // Determine which auth mode is active
+  const useMainAuth = !!mainToken && !!mainUser;
+  const activeToken = useMainAuth ? mainToken : staffToken;
+  const activeTenantId = useMainAuth ? mainUser?.tenantId : staffUser?.tenantId;
+  const activeBranchId = useMainAuth ? mainUser?.branchId : staffUser?.branchId;
+  const isAuthenticated = useMainAuth || isStaffAuthenticated();
+
+  // Redirect to login if not authenticated via either method
   useEffect(() => {
-    if (!isStaffAuthenticated()) {
+    if (!isAuthenticated) {
       router.push("/staff/login");
     }
-  }, [staffToken, isStaffAuthenticated, router]);
+  }, [isAuthenticated, router]);
 
   const { joinCounter, onEvent } = useSocket();
   const [currentTicket, setCurrentTicket] = useState<any>(null);
@@ -122,18 +133,25 @@ export default function StaffCounterPage({
   const isServing = currentTicket?.status === "SERVING";
   const timer = useServiceTimer(isServing);
 
-  // Load counter info via staff session
+  // Load counter info via active session
   useEffect(() => {
-    if (!staffToken) return;
-    api.staffCounter.get(counterId).then(setCounter).catch(console.error);
-  }, [counterId, staffToken]);
+    if (!activeToken) return;
+    if (useMainAuth) {
+      api.counters
+        .get(counterId, activeToken)
+        .then(setCounter)
+        .catch(console.error);
+    } else {
+      api.staffCounter.get(counterId).then(setCounter).catch(console.error);
+    }
+  }, [counterId, activeToken, useMainAuth]);
 
   // Join socket room
   useEffect(() => {
-    if (staffUser?.tenantId && staffUser?.branchId) {
-      joinCounter(staffUser.tenantId, staffUser.branchId, counterId);
+    if (activeTenantId && activeBranchId) {
+      joinCounter(activeTenantId, activeBranchId, counterId);
     }
-  }, [staffUser, counterId, joinCounter]);
+  }, [activeTenantId, activeBranchId, counterId, joinCounter]);
 
   // Socket events
   useEffect(() => {
@@ -201,16 +219,24 @@ export default function StaffCounterPage({
 
   const performAction = useCallback(
     async (action: string) => {
-      if (!staffToken || loading) return;
+      if (!activeToken || loading) return;
       setLoading(action);
       try {
-        const actions: Record<string, () => Promise<any>> = {
-          next: () => api.staffCounter.next(counterId),
-          recall: () => api.staffCounter.recall(counterId),
-          skip: () => api.staffCounter.skip(counterId),
-          start: () => api.staffCounter.startServing(counterId),
-          done: () => api.staffCounter.done(counterId),
-        };
+        const actions: Record<string, () => Promise<any>> = useMainAuth
+          ? {
+              next: () => api.counters.next(counterId, activeToken!),
+              recall: () => api.counters.recall(counterId, activeToken!),
+              skip: () => api.counters.skip(counterId, activeToken!),
+              start: () => api.counters.startServing(counterId, activeToken!),
+              done: () => api.counters.done(counterId, activeToken!),
+            }
+          : {
+              next: () => api.staffCounter.next(counterId),
+              recall: () => api.staffCounter.recall(counterId),
+              skip: () => api.staffCounter.skip(counterId),
+              start: () => api.staffCounter.startServing(counterId),
+              done: () => api.staffCounter.done(counterId),
+            };
         const result = await actions[action]!();
         if (action === "next" || action === "recall") {
           setCurrentTicket(result);
@@ -251,15 +277,19 @@ export default function StaffCounterPage({
         setLoading(null);
       }
     },
-    [counterId, staffToken, loading, currentTicket, playSound],
+    [counterId, activeToken, useMainAuth, loading, currentTicket, playSound],
   );
 
   const handleTransfer = useCallback(
     async (targetQueueId: string) => {
-      if (!staffToken) return;
+      if (!activeToken) return;
       setLoading("transfer");
       try {
-        await api.staffCounter.transfer(counterId, targetQueueId);
+        if (useMainAuth) {
+          await api.counters.transfer(counterId, targetQueueId, activeToken!);
+        } else {
+          await api.staffCounter.transfer(counterId, targetQueueId);
+        }
         setCurrentTicket(null);
         setShowTransfer(false);
       } catch (err: any) {
@@ -268,17 +298,24 @@ export default function StaffCounterPage({
         setLoading(null);
       }
     },
-    [counterId, staffToken],
+    [counterId, activeToken, useMainAuth],
   );
 
   const handleLogout = () => {
-    clearStaffAuth();
-    router.push("/staff/login");
+    if (useMainAuth) {
+      // Main auth: go back to dashboard (don't clear main auth)
+      router.push("/dashboard");
+    } else {
+      clearStaffAuth();
+      router.push("/staff/login");
+    }
   };
 
-  const employeeName = staffUser
-    ? `${staffUser.firstName} ${staffUser.lastName}`
-    : "";
+  const employeeName = useMainAuth
+    ? `${mainUser?.firstName} ${mainUser?.lastName}`
+    : staffUser
+      ? `${staffUser.firstName} ${staffUser.lastName}`
+      : "";
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-surface-primary">

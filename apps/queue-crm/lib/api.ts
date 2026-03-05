@@ -198,8 +198,10 @@ export const api = {
     get: (id: string, token: string) => request(`/tenants/${id}`, { token }),
     update: (id: string, data: any, token: string) =>
       request(`/tenants/${id}`, { method: "PATCH", body: data, token }),
-    switchMode: (data: { mode: string; soloProfile?: any }, token: string) =>
-      request("/tenants/switch-mode", { method: "POST", body: data, token }),
+    switchMode: (
+      data: { mode: string; soloProfile?: any; workingHours?: any },
+      token: string,
+    ) => request("/tenants/switch-mode", { method: "POST", body: data, token }),
   },
   branches: {
     list: (tenantId: string, token: string) =>

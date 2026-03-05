@@ -68,11 +68,16 @@ export class TenantService {
     tenantId: string,
     mode: TenantMode,
     soloProfile?: Record<string, any>,
+    workingHours?: Record<string, any>,
   ): Promise<TenantDocument> {
     const updates: any = { mode };
 
     if (mode === TenantMode.SOLO && soloProfile) {
       updates.soloProfile = soloProfile;
+    }
+
+    if (mode === TenantMode.MULTI && workingHours) {
+      updates.workingHours = workingHours;
     }
 
     const tenant = await this.tenantModel

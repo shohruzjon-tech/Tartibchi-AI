@@ -78,13 +78,14 @@ export class TenantController {
   @Roles(UserRole.TENANT_ADMIN)
   async switchMode(
     @CurrentUser() user: any,
-    @Body() body: { mode: string; soloProfile?: any },
+    @Body() body: { mode: string; soloProfile?: any; workingHours?: any },
   ) {
     return firstValueFrom(
       this.accountsClient.send(TENANT_PATTERNS.SWITCH_MODE, {
         tenantId: user.tenantId,
         mode: body.mode,
         soloProfile: body.soloProfile,
+        workingHours: body.workingHours,
       }),
     );
   }

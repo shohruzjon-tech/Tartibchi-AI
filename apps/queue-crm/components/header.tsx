@@ -67,8 +67,8 @@ export function Header() {
   if (isDashboard) {
     return (
       <div className="flex flex-1 items-center justify-between">
-        <WorkspaceRoleSwitcher />
         <div className="ml-auto flex items-center gap-3">
+          <WorkspaceRoleSwitcher />
           <LanguageSwitcher />
           <ThemeToggle />
           <Dropdown

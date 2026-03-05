@@ -38,7 +38,7 @@ const ROLE_CONFIG = {
     color: "from-emerald-500 to-teal-600",
     bg: "bg-emerald-500/8",
     border: "border-emerald-500/20",
-    redirectTo: "/staff/login",
+    redirectTo: "/staff/select-counter",
   },
 } as const;
 
@@ -52,6 +52,9 @@ export function WorkspaceRoleSwitcher() {
   const [open, setOpen] = useState(false);
 
   if (!user) return null;
+
+  // Only show role switcher for multi-employee workspaces
+  if (user.tenantMode !== "MULTI") return null;
 
   const currentRole = user.role as RoleKey;
   const roleConfig = ROLE_CONFIG[currentRole] || ROLE_CONFIG.STAFF;

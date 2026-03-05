@@ -409,6 +409,13 @@ export default function SettingsPage() {
     setSwitching(true);
     setSwitchError("");
     try {
+      // Refresh token first to ensure we have a valid TENANT_ADMIN session
+      const preRefresh = await api.auth.refresh(
+        useAuthStore.getState().refreshToken!,
+      );
+      setAuth(preRefresh);
+      const freshToken = preRefresh.accessToken;
+
       const payload: any = { mode: switchTarget };
       if (switchTarget === "SOLO") {
         payload.soloProfile = {
@@ -422,7 +429,8 @@ export default function SettingsPage() {
       if (switchTarget === "MULTI") {
         payload.workingHours = multiWorkingHours;
       }
-      await api.tenants.switchMode(payload, token);
+      await api.tenants.switchMode(payload, freshToken);
+      // Refresh again to pick up the new tenantMode
       const refreshData = await api.auth.refresh(
         useAuthStore.getState().refreshToken!,
       );

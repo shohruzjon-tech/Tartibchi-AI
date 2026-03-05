@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "../../../../i18n/navigation";
 import { api } from "../../../../lib/api";
-import { useStaffStore } from "../../../../lib/store";
+import { useAuthStore, useStaffStore } from "../../../../lib/store";
 import { PhoneInput } from "../../../../components/ui/phone-input";
 
 export default function StaffLoginPage() {
@@ -22,16 +22,24 @@ export default function StaffLoginPage() {
   const tc = useTranslations("common");
   const router = useRouter();
   const { setStaffAuth, setPendingSelection, staff } = useStaffStore();
+  const mainToken = useAuthStore((s) => s.token);
+  const mainUser = useAuthStore((s) => s.user);
   const [login, setLogin] = useState("+998");
   const [passcode, setPasscode] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    // If already authenticated via main auth, redirect to counter selection
+    if (mainToken && mainUser) {
+      router.push("/staff/select-counter");
+      return;
+    }
+    // If already authenticated as staff, go to counter
     if (staff) {
       router.push(`/staff/counter/${staff.counterId}`);
     }
-  }, [staff, router]);
+  }, [staff, mainToken, mainUser, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
