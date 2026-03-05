@@ -180,6 +180,15 @@ services:
         condition: service_healthy
     networks:
       - queue-network
+      - cu24-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=cu24-network"
+      - "traefik.http.routers.qs-websocket.rule=Host(`${QS_WS_HOST}`)"
+      - "traefik.http.routers.qs-websocket.entrypoints=websecure"
+      - "traefik.http.routers.qs-websocket.tls=true"
+      - "traefik.http.routers.qs-websocket.tls.certresolver=letsencrypt"
+      - "traefik.http.services.qs-websocket.loadbalancer.server.port=5006"
 
   # ======== Apps ========
   gateway:
@@ -214,6 +223,15 @@ services:
       - websocket-service
     networks:
       - queue-network
+      - cu24-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=cu24-network"
+      - "traefik.http.routers.qs-gateway.rule=Host(`${QS_API_HOST}`)"
+      - "traefik.http.routers.qs-gateway.entrypoints=websecure"
+      - "traefik.http.routers.qs-gateway.tls=true"
+      - "traefik.http.routers.qs-gateway.tls.certresolver=letsencrypt"
+      - "traefik.http.services.qs-gateway.loadbalancer.server.port=5000"
 
   crm:
     build:
@@ -229,28 +247,15 @@ services:
       - gateway
     networks:
       - queue-network
-
-  # ======== Reverse Proxy ========
-  traefik:
-    image: traefik:v3.0
-    container_name: qs-traefik
-    restart: unless-stopped
-    command:
-      - "--api.insecure=true"
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--entrypoints.web.address=:80"
-      - "--entrypoints.websecure.address=:443"
-    ports:
-      - "80:80"
-      - "443:443"
-      - "8080:8080"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    networks:
-      - queue-network
+      - cu24-network
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=cu24-network"
+      - "traefik.http.routers.qs-crm.rule=Host(`${QS_CRM_HOST}`)"
+      - "traefik.http.routers.qs-crm.entrypoints=websecure"
+      - "traefik.http.routers.qs-crm.tls=true"
+      - "traefik.http.routers.qs-crm.tls.certresolver=letsencrypt"
+      - "traefik.http.services.qs-crm.loadbalancer.server.port=5020"
 
 volumes:
   mongodb_data:
@@ -259,3 +264,6 @@ volumes:
 networks:
   queue-network:
     driver: bridge
+  cu24-network:
+    external: true
+    name: cu24-network
